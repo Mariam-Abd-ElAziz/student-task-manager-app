@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 import '../models/user.dart';
+import '../services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -32,12 +33,31 @@ class _SignupScreenState extends State<SignupScreen> {
         password: _passwordController.text,
       );
 
+       try {
+      // Try local SQLite first
       try {
         await DatabaseHelper.instance.insertUser(user);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Signup Success')),
-          );
+      } catch (dbError) {
+        print('Local DB not available on web: $dbError');
+      }
+
+      // Always sync to Firebase regardless
+      await ApiService().saveUser({
+        'fullName': _fullNameController.text,
+        'studentId': _studentIdController.text,
+        'email': _emailController.text,
+        'gender': _selectedGender ?? 'Not specified',
+        'academicLevel': _selectedAcademicLevel?.toString() ?? 'Not specified',
+      });
+
+
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Signup Success')),
+    );
+    Navigator.pushNamedAndRemoveUntil(
+      context, '/login', (route) => false,
+    );
           // Navigate to login or home screen
           // Navigator.pop(context);
         }
