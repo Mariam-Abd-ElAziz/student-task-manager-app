@@ -1,6 +1,3 @@
-
-//Models
-
 class Task {
   final int? id;
   final int userId;
@@ -8,7 +5,7 @@ class Task {
   final String? description;
   final String dueDate;       
   final String priority;      
-  final bool isCompleted;
+  bool isCompleted;
  
   Task({
     this.id,

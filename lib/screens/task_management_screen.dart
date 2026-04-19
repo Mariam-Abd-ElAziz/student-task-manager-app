@@ -1,0 +1,262 @@
+import 'package:flutter/material.dart';
+import '../db/db_helper.dart';
+import '../models/task.dart';
+
+class TaskManagementScreen extends StatefulWidget {
+  final int userId;
+
+  const TaskManagementScreen({super.key, required this.userId});
+
+  @override
+  State<TaskManagementScreen> createState() => _TaskManagementScreenState();
+}
+
+class _TaskManagementScreenState extends State<TaskManagementScreen> {
+  List<Task> _tasks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    final tasks = await DatabaseHelper.instance.getTasksByUser(widget.userId);
+    setState(() => _tasks = tasks);
+  }
+
+  void _showTaskDialog({Task? task}) {
+    final isEditing = task != null;
+    final formKey = GlobalKey<FormState>();
+    final titleController = TextEditingController(text: task?.title ?? '');
+    final descController = TextEditingController(text: task?.description ?? '');
+    DateTime selectedDate =
+        task != null ? DateTime.parse(task.dueDate) : DateTime.now();
+    String priority = task?.priority ?? 'Medium';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(isEditing ? 'Edit Task' : 'Add Task'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Title
+                  TextFormField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Task Title *'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Task title is mandatory.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  TextFormField(
+                    controller: descController,
+                    decoration:
+                        const InputDecoration(labelText: 'Description (Optional)'),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Due Date
+                  Row(
+                    children: [
+                      const Text('Due Date: '),
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                          );
+                          if (picked != null) {
+                            setDialogState(() => selectedDate = picked);
+                          }
+                        },
+                        child: Text(
+                          '${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Priority
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(labelText: 'Priority'),
+                    value: priority,
+                    items: ['Low', 'Medium', 'High']
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => priority = value);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  final newTask = Task(
+                    id: task?.id,
+                    title: titleController.text,
+                    description: descController.text.isEmpty
+                        ? null
+                        : descController.text,
+                    dueDate:
+                        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
+                    priority: priority,
+                    isCompleted: task?.isCompleted ?? false,
+                    userId: widget.userId,
+                  );
+
+                  if (isEditing) {
+                    await DatabaseHelper.instance.updateTask(newTask);
+                  } else {
+                    await DatabaseHelper.instance.insertTask(newTask);
+                  }
+
+                  Navigator.pop(context);
+                  _loadTasks();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          isEditing ? 'Task updated.' : 'Task added.'),
+                    ),
+                  );
+                }
+              },
+              child: Text(isEditing ? 'Save' : 'Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteTask(Task task) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Task'),
+        content: Text('Are you sure you want to delete "${task.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await DatabaseHelper.instance.deleteTask(task.id!);
+      _loadTasks();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task deleted.')),
+      );
+    }
+  }
+
+  Future<void> _toggleComplete(Task task) async {
+    task.isCompleted = !task.isCompleted;
+    await DatabaseHelper.instance.updateTask(task);
+    _loadTasks();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Tasks'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () {
+              Navigator.pushNamedAndRemoveUntil(
+                  context, '/login', (route) => false);
+            },
+          ),
+        ],
+      ),
+      body: _tasks.isEmpty
+          ? const Center(child: Text('No tasks yet. Tap + to add one.'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _tasks.length,
+              itemBuilder: (context, index) {
+                final task = _tasks[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    leading: Checkbox(
+                      value: task.isCompleted,
+                      onChanged: (_) => _toggleComplete(task),
+                    ),
+                    title: Text(
+                      task.title,
+                      style: TextStyle(
+                        decoration: task.isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (task.description != null &&
+                            task.description!.isNotEmpty)
+                          Text(task.description!),
+                        Text(
+                            'Due: ${task.dueDate}  |  Priority: ${task.priority}'),
+                      ],
+                    ),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _showTaskDialog(task: task),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _deleteTask(task),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showTaskDialog(),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
