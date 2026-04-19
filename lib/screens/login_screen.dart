@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
+import '../services/api_service.dart';
+import '../models/user.dart';
 import 'signup_screen.dart';
 import 'profile_screen.dart';
 
@@ -25,17 +27,62 @@ class _LoginScreenState extends State<LoginScreen> {
       });
 
       try {
-        final user = await DatabaseHelper.instance.getUserByCredentials(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
+        dynamic user;
+
+        // Try local SQLite first
+        try {
+          user = await DatabaseHelper.instance.getUserByCredentials(
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
+        } catch (dbError) {
+          print('SQLite not available, trying Firebase...');
+        }
+
+        // If SQLite failed or user not found, try Firebase
+        if (user == null) {
+          try {
+            final email = _emailController.text.trim();
+            final studentId = email.split('@')[0];
+            final firebaseUser = await ApiService().getUser(studentId);
+
+            if (firebaseUser != null &&
+                firebaseUser['email'] == email) {
+              // Build User object from Firebase data
+              final User firebaseUserObj = User(
+                fullName: firebaseUser['fullName'] ?? '',
+                uniEmail: firebaseUser['email'] ?? '',
+                studentId: firebaseUser['studentId'] ?? '',
+                gender: firebaseUser['gender'],
+                academicLevel: int.tryParse(
+                  firebaseUser['academicLevel']?.toString() ?? '',
+                ),
+                password: '',
+              );
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Login Successful (Firebase)')),
+                );
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProfileScreen(user: firebaseUserObj),
+                  ),
+                );
+              }
+              return;
+            }
+          } catch (firebaseError) {
+            print('Firebase error: $firebaseError');
+          }
+        }
 
         if (mounted) {
           if (user != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Login Successful')),
             );
-            // Navigate to Profile Screen for now
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => ProfileScreen(user: user)),
@@ -137,7 +184,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const SignupScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const SignupScreen(),
+                      ),
                     );
                   },
                   child: const Text('Don\'t have an account? Sign up here'),
@@ -150,3 +199,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+  
