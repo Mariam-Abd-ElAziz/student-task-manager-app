@@ -29,6 +29,9 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       version: _dbVersion,
+      onConfigure: (Database db) async {
+    await db.execute('PRAGMA foreign_keys = ON');
+  },
       onCreate: _onCreate,
     );
   }
@@ -37,10 +40,9 @@ class DatabaseHelper {
     // USERS TABLE
     await db.execute('''
       CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id TEXT PRIMARY KEY,
         full_name TEXT NOT NULL,
         uni_email TEXT NOT NULL UNIQUE,
-        student_id TEXT NOT NULL UNIQUE,
         gender TEXT,
         academic_level INTEGER,
         password TEXT NOT NULL,
@@ -52,13 +54,13 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
         title TEXT NOT NULL,
         description TEXT,
         due_date TEXT NOT NULL,
         priority TEXT NOT NULL,
         is_completed INTEGER DEFAULT 0,
-        FOREIGN KEY (user_id) REFERENCES users (id)
+        FOREIGN KEY (user_id) REFERENCES users (student_id)
       )
     ''');
   }
@@ -70,7 +72,8 @@ class DatabaseHelper {
     return await db.insert(tableUsers, user.toMap());
   }
 
-  Future<User?> getUserByCredentials(String email, String password) async {
+  Future<User?> getUserByCredentials(
+      String email, String password) async {
     final db = await database;
 
     final result = await db.query(
@@ -85,13 +88,13 @@ class DatabaseHelper {
     return null;
   }
 
-  Future<User?> getUserById(int id) async {
+  Future<User?> getUserById(String studentId) async {
     final db = await database;
 
     final result = await db.query(
       tableUsers,
-      where: "id = ?",
-      whereArgs: [id],
+      where: "student_id = ?",
+      whereArgs: [studentId],
     );
 
     if (result.isNotEmpty) {
@@ -100,14 +103,15 @@ class DatabaseHelper {
     return null;
   }
 
-  Future<int> updateUser(int id, Map<String, dynamic> data) async {
+  Future<int> updateUser(
+      String studentId, Map<String, dynamic> data) async {
     final db = await database;
 
     return db.update(
       tableUsers,
       data,
-      where: "id = ?",
-      whereArgs: [id],
+      where: "student_id = ?",
+      whereArgs: [studentId],
     );
   }
 
@@ -118,7 +122,7 @@ class DatabaseHelper {
     return db.insert(tableTasks, task.toMap());
   }
 
-  Future<List<Task>> getTasksByUser(int userId) async {
+  Future<List<Task>> getTasksByUser(String userId) async {
     final db = await database;
 
     final result = await db.query(

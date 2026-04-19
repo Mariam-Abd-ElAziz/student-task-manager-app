@@ -3,7 +3,7 @@ import '../db/db_helper.dart';
 import '../services/api_service.dart';
 import '../models/user.dart';
 import 'signup_screen.dart';
-import 'profile_screen.dart';
+import 'task_management_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,16 +50,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 firebaseUser['email'] == email) {
               // Build User object from Firebase data
               final User firebaseUserObj = User(
-                fullName: firebaseUser['fullName'] ?? '',
-                uniEmail: firebaseUser['email'] ?? '',
-                studentId: firebaseUser['studentId'] ?? '',
+                fullName: firebaseUser['full_name'] ?? '',
+                uniEmail: firebaseUser['uni_email'] ?? '',
+                studentId: firebaseUser['student_id'] ?? studentId,
                 gender: firebaseUser['gender'],
-                academicLevel: int.tryParse(
-                  firebaseUser['academicLevel']?.toString() ?? '',
-                ),
-                password: '',
+                academicLevel: firebaseUser['academic_level'] as int?,
+                password: firebaseUser['password'] ?? '',
               );
-
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Login Successful (Firebase)')),
@@ -67,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ProfileScreen(user: firebaseUserObj),
+                   builder: (_) => TaskManagementScreen(user: firebaseUserObj,),
                   ),
                 );
               }
@@ -85,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => ProfileScreen(user: user)),
+              MaterialPageRoute(builder: (_) => TaskManagementScreen(user: user)),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(

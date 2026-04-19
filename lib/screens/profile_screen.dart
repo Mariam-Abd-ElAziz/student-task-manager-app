@@ -106,8 +106,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'profile_photo': _profilePhotoPath,
         };
 
-        if (widget.user.id != null) {
-          await DatabaseHelper.instance.updateUser(widget.user.id!, data);
+        if (widget.user.studentId != null) {
+          await DatabaseHelper.instance.updateUser(widget.user.studentId, data);
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -130,6 +130,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
   }
+  void _logout() {
+  Navigator.of(context).pushNamedAndRemoveUntil(
+    '/login',
+    (route) => false,
+  );
+}
+void _confirmLogout() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Logout'),
+      content: const Text('Are you sure you want to logout?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            _logout();
+          },
+          child: const Text('Logout'),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -140,6 +168,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.save),
             onPressed: _isLoading ? null : _updateProfile,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _confirmLogout,
           ),
         ],
       ),

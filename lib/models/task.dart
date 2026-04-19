@@ -1,6 +1,6 @@
 class Task {
   final int? id;
-  final int userId;
+  final String userId;
   final String title;
   final String? description;
   final String dueDate;       
@@ -32,7 +32,7 @@ class Task {
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: map['id'] as int?,
-      userId: map['user_id'] as int,
+      userId: map['user_id'].toString() ,
       title: map['title'] as String,
       description: map['description'] as String?,
       dueDate: map['due_date'] as String,

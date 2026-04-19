@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../db/db_helper.dart';
 import '../models/task.dart';
+import 'profile_screen.dart';
+import '../models/user.dart';
 
 class TaskManagementScreen extends StatefulWidget {
-  final int userId;
+final User user;
 
-  const TaskManagementScreen({super.key, required this.userId});
+  const TaskManagementScreen({super.key, required this.user});
 
   @override
   State<TaskManagementScreen> createState() => _TaskManagementScreenState();
@@ -21,7 +23,7 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
   }
 
   Future<void> _loadTasks() async {
-    final tasks = await DatabaseHelper.instance.getTasksByUser(widget.userId);
+    final tasks = await DatabaseHelper.instance.getTasksByUser(widget.user.studentId);
     setState(() => _tasks = tasks);
   }
 
@@ -126,8 +128,10 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
                         '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
                     priority: priority,
                     isCompleted: task?.isCompleted ?? false,
-                    userId: widget.userId,
+                    userId: widget.user.studentId,
                   );
+                  print('Inserting task with userId: ${newTask.userId}'); // 👈 add this
+      print('Task map: ${newTask.toMap()}'); 
 
                   if (isEditing) {
                     await DatabaseHelper.instance.updateTask(newTask);
@@ -194,11 +198,16 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
         title: const Text('My Tasks'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
+            icon: const Icon(Icons.person),
+            tooltip: 'Profile',
             onPressed: () {
-              Navigator.pushNamedAndRemoveUntil(
-                  context, '/login', (route) => false);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(user: widget.user),
+                ),
+              );
+
             },
           ),
         ],
