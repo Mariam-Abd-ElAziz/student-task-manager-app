@@ -32,7 +32,6 @@ class TaskProvider extends ChangeNotifier {
     await loadFavorites(userId);
   }
 
-  // ❌ Delete task
   Future<void> deleteTask(int id, String userId) async {
     await db.deleteTask(id);
     await loadTasks(userId);

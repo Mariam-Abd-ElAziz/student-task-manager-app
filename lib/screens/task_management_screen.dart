@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/task_provider.dart';
 import '../db/db_helper.dart';
 import '../models/task.dart';
 import 'profile_screen.dart';
@@ -14,18 +16,17 @@ final User user;
 }
 
 class _TaskManagementScreenState extends State<TaskManagementScreen> {
-  List<Task> _tasks = [];
-
+    late TaskProvider provider;
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+      Future.microtask(() {
+    Provider.of<TaskProvider>(context, listen: false)
+        .loadTasks(widget.user.studentId);
+  });
   }
 
-  Future<void> _loadTasks() async {
-    final tasks = await DatabaseHelper.instance.getTasksByUser(widget.user.studentId);
-    setState(() => _tasks = tasks);
-  }
+
 
   void _showTaskDialog({Task? task}) {
     final isEditing = task != null;
@@ -130,17 +131,18 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
                     isCompleted: task?.isCompleted ?? false,
                     userId: widget.user.studentId,
                   );
-                  print('Inserting task with userId: ${newTask.userId}'); // 👈 add this
+                  print('Inserting task with userId: ${newTask.userId}'); 
       print('Task map: ${newTask.toMap()}'); 
 
                   if (isEditing) {
-                    await DatabaseHelper.instance.updateTask(newTask);
+                    await Provider.of<TaskProvider>(context, listen: false)
+                    .updateTask(newTask, widget.user.studentId);
                   } else {
-                    await DatabaseHelper.instance.insertTask(newTask);
+                    await Provider.of<TaskProvider>(context, listen: false)
+                    .addTask(newTask, widget.user.studentId);
                   }
 
                   Navigator.pop(context);
-                  _loadTasks();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -177,8 +179,8 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
     );
 
     if (confirm == true) {
-      await DatabaseHelper.instance.deleteTask(task.id!);
-      _loadTasks();
+      await Provider.of<TaskProvider>(context, listen: false)
+    .deleteTask(task.id!, widget.user.studentId);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Task deleted.')),
       );
@@ -187,12 +189,14 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
 
   Future<void> _toggleComplete(Task task) async {
     task.isCompleted = !task.isCompleted;
-    await DatabaseHelper.instance.updateTask(task);
-    _loadTasks();
+    await Provider.of<TaskProvider>(context, listen: false)
+    .updateTask(task, widget.user.studentId);
   }
 
   @override
   Widget build(BuildContext context) {
+      final provider = Provider.of<TaskProvider>(context);
+      final tasks = provider.tasks;
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Tasks'),
@@ -212,13 +216,13 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
           ),
         ],
       ),
-      body: _tasks.isEmpty
+      body: tasks.isEmpty
           ? const Center(child: Text('No tasks yet. Tap + to add one.'))
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _tasks.length,
+              itemCount: tasks.length,
               itemBuilder: (context, index) {
-                final task = _tasks[index];
+                final task = tasks[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
