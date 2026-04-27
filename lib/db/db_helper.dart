@@ -60,6 +60,7 @@ class DatabaseHelper {
         due_date TEXT NOT NULL,
         priority TEXT NOT NULL,
         is_completed INTEGER DEFAULT 0,
+        is_favorite INTEGER DEFAULT 0,
         FOREIGN KEY (user_id) REFERENCES users (student_id)
       )
     ''');
@@ -166,6 +167,29 @@ class DatabaseHelper {
       whereArgs: [id],
     );
   }
+
+  Future<List<Task>> getFavoriteTasks(String userId) async {
+  final db = await database;
+
+  final result = await db.query(
+    tableTasks,
+    where: "user_id = ? AND is_favorite = ?",
+    whereArgs: [userId, 1],
+  );
+
+  return result.map((e) => Task.fromMap(e)).toList();
+}
+
+Future<int> toggleFavorite(int id, bool value) async {
+  final db = await database;
+
+  return db.update(
+    tableTasks,
+    {"is_favorite": value ? 1 : 0},
+    where: "id = ?",
+    whereArgs: [id],
+  );
+}
 
 
   // Close db
