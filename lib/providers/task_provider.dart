@@ -11,6 +11,7 @@ class TaskProvider extends ChangeNotifier {
   List<Task> get tasks => _tasks;
   List<Task> get favoriteTasks => _favoriteTasks;
 
+  // ================= LOAD =================
   Future<void> loadTasks(String userId) async {
     _tasks = await db.getTasksByUser(userId);
     notifyListeners();
@@ -21,30 +22,37 @@ class TaskProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ================= ADD =================
   Future<void> addTask(Task task, String userId) async {
     await db.insertTask(task);
     await loadTasks(userId);
   }
 
+  // ================= UPDATE =================
   Future<void> updateTask(Task task, String userId) async {
     await db.updateTask(task);
     await loadTasks(userId);
     await loadFavorites(userId);
   }
 
+  // ================= DELETE =================
   Future<void> deleteTask(int id, String userId) async {
     await db.deleteTask(id);
     await loadTasks(userId);
     await loadFavorites(userId);
   }
 
+  // ================= COMPLETE =================
   Future<void> toggleCompleted(Task task, String userId) async {
-    await db.toggleTask(task.id!, !task.isCompleted);
+    task.isCompleted = !task.isCompleted; // ⭐ FIX
+    await db.updateTask(task);
     await loadTasks(userId);
   }
 
+  // ================= FAVORITE =================
   Future<void> toggleFavorite(Task task, String userId) async {
-    await db.toggleFavorite(task.id!, !task.isFavorite);
+    task.isFavorite = !task.isFavorite; // ⭐ IMPORTANT FIX
+    await db.updateTask(task);          // instead of toggleFavorite()
     await loadTasks(userId);
     await loadFavorites(userId);
   }
