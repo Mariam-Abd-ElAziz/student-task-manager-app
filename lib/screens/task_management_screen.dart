@@ -281,6 +281,7 @@ import '../models/task.dart';
 import '../models/user.dart';
 import 'profile_screen.dart';
 import 'favorite_tasks_screen.dart';
+import 'deadline_tracking_screen.dart';
 
 class TaskManagementScreen extends StatefulWidget {
   final User user;
@@ -470,6 +471,17 @@ class _TaskManagementScreenState extends State<TaskManagementScreen> {
         title: const Text('My Tasks'),
 
         actions: [
+          IconButton(
+            icon: const Icon(Icons.timer),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DeadlineTrackingScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.favorite),
             onPressed: () {
